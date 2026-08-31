@@ -1,44 +1,61 @@
-main();
-
-function main(){
+export function setupWebGL(){
     const canvas = document.querySelector("#glcanvas");
     const gl = canvas.getContext("webgl2");
-
-    // Coleta de dados do HTML
-    const vertexShaderCode = document.querySelector('[type="shader/vertex"]').textContent;
-    const fragmentShaderCode = document.querySelector('[type="shader/fragment"]').textContent;
-
-    // Compilação de shaders
-    const program = createProgram(gl,
-      createShader(gl, 'vs', gl.VERTEX_SHADER, vertexShaderCode),
-      createShader(gl, 'fs', gl.FRAGMENT_SHADER, fragmentShaderCode)
-    );
-    gl.useProgram(program);
-
     if (!gl){
         console.error("WebGL não suportado");
         throw new Error('WebGL2 não suportado');
     }
+    return gl;
+}
 
-    var vertices = new Float32Array
-    [
-        0.0, 0.0, 0.0,
-        0.5, -0.5, 0.0,
-        1.0, 1.0, 0.0
-    ];
+export function initialize(gl){
+    
+    // Códigos dos shaders do HTML
+    const vertexShaderCode = document.querySelector('[type="shader/vertex"]').textContent.trim();
+    const fragmentShaderCode = document.querySelector('[type="shader/fragment"]').textContent.trim();
+    
+    const program = createProgram(gl,
+          createShader(gl, gl.VERTEX_SHADER, vertexShaderCode),
+          createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderCode)
+        );
 
-    const vao = gl.createVertexArray();
-    gl.bindVertexArray(vao);
-    const ebo = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo);
+    gl.linkProgram(program);
+    gl.useProgram(program);
 
-    var vertexBuffer = gl.createBuffer();
+    return program
+}
+
+function createProgram(gl, vertexShader, fragmentShader){
+    const program = gl.createProgram();
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+    
+    return program
+}
+
+function createShader(gl, type, source){
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source.trim());
+    gl.compileShader(shader);
+
+    return shader;
+}
+
+export function drawPoint(gl, program){
+    // Criar e carregar dados dos vértices
+    const vertices = new Float32Array([0.0, 0.0, 0.0]);
+    const vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
-    
-    
+    // Conectar atributo ao buffer
+    const coordinatesLocation = gl.getAttribLocation(program, "coordinates");
+    gl.enableVertexAttribArray(coordinatesLocation);
+    gl.vertexAttribPointer(coordinatesLocation, 3, gl.FLOAT, false, 0, 0);
+
+    // Renderizar
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawArrays(gl.POINTS, 0, 1);
 }

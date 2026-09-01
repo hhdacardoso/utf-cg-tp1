@@ -13,10 +13,11 @@
         #version 300 es
 
         in vec3 coordinates;
+        in float pointSize;
 
         void main(){
             gl_Position = vec4(coordinates, 1.0);
-            gl_PointSize = 15.0;
+            gl_PointSize = pointSize;
         }
     </script>
 
@@ -33,9 +34,31 @@
 
     <script type="module">
         import {drawPoint, setupWebGL, initialize} from "/main.js"
-
         const gl = setupWebGL();
         const program = initialize(gl);
-        drawPoint(gl, program);
+        
+        let lastUpdate = 0;
+        const interval = 1000; // Intervalo em ms para update da posição
+        
+        let vertices = new Float32Array([0.0, 0.0, 0.0,
+                                         0.5, 0.5, 0.5]);
+                                         
+        function updatePos(){
+            const x = Math.random() * 2 - 1;
+            const y = Math.random() * 2 - 1;
+            vertices[3] = x;
+            vertices[4] = y;
+            }
+            
+            function render(timeStamp){
+            if (timeStamp - lastUpdate > interval){
+                updatePos();
+                lastUpdate = timeStamp;
+            }
+            drawPoint(gl, program, vertices);
+            requestAnimationFrame(render);
+        }
+
+        requestAnimationFrame(render);
     </script>
 </html>

@@ -42,9 +42,10 @@ function createShader(gl, type, source){
     return shader;
 }
 
-export function drawPoint(gl, program){
-    // Criar e carregar dados dos vértices
-    const vertices = new Float32Array([0.0, 0.0, 0.0]);
+export function drawPoint(gl, program, vertices){
+    // Criar e carregar dados dos vértices - Antes da atualização de posição
+    // const vertices = new Float32Array([0.0, 0.0, 0.0,
+    //                                    0.25, 0.25, 0.0]);
     const vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
@@ -54,8 +55,17 @@ export function drawPoint(gl, program){
     gl.enableVertexAttribArray(coordinatesLocation);
     gl.vertexAttribPointer(coordinatesLocation, 3, gl.FLOAT, false, 0, 0);
 
+    const sizes = new Float32Array([15.0, 5.0]);
+    const sizeBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, sizes, gl.STATIC_DRAW);
+
+    const sizeLocation = gl.getAttribLocation(program, "pointSize");
+    gl.enableVertexAttribArray(sizeLocation);
+    gl.vertexAttribPointer(sizeLocation, 1, gl.FLOAT, false, 0, 0);
+
     // Renderizar
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.drawArrays(gl.POINTS, 0, 1);
+    gl.drawArrays(gl.POINTS, 0, 2);
 }

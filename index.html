@@ -33,32 +33,27 @@
     </script>
 
     <script type="module">
-        import {drawPoint, setupWebGL, initialize} from "/main.js"
+        import {drawPoint, setupWebGL, initialize, updatePos, render} from "/main.js"
         const gl = setupWebGL();
         const program = initialize(gl);
         
-        let lastUpdate = 0;
-        const interval = 1000; // Intervalo em ms para update da posição
+        let lastUpdate = {valor: 0};
+
+        const posList = [
+            [1.0, 1.0, 1.0],
+            [0.75, 0.75, 0.75],
+            [0.5, 0.5, 0.5],
+            [0.25, 0.25, 0.25],
+            [0.0, 0.0, 0.0]
+        ];
+        let posIndex = {valor: 0};
         
         let vertices = new Float32Array([0.0, 0.0, 0.0,
-                                         0.5, 0.5, 0.5]);
-                                         
-        function updatePos(){
-            const x = Math.random() * 2 - 1;
-            const y = Math.random() * 2 - 1;
-            vertices[3] = x;
-            vertices[4] = y;
-            }
+                                         ...posList[0]]);
             
-            function render(timeStamp){
-            if (timeStamp - lastUpdate > interval){
-                updatePos();
-                lastUpdate = timeStamp;
-            }
-            drawPoint(gl, program, vertices);
-            requestAnimationFrame(render);
-        }
+        requestAnimationFrame((timeStamp) =>
+            render(timeStamp, lastUpdate, posIndex, posList, vertices, gl, program));
 
-        requestAnimationFrame(render);
+        // requestAnimationFrame(renderFun);
     </script>
 </html>

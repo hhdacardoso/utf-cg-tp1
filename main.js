@@ -69,3 +69,24 @@ export function drawPoint(gl, program, vertices){
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.drawArrays(gl.POINTS, 0, 2);
 }
+
+export function updatePos(posIndex, posList, vertices){
+    posIndex.valor = (posIndex.valor + 1) % posList.length; // Conferir se a conversão para objeto funcionou
+    const [x, y, z] = posList[posIndex.valor];
+    vertices[3] = x;
+    vertices[4] = y;
+    vertices[5] = z;
+}
+
+// Conferir se a função está funcionando corretamente com export
+export function render(timeStamp, lastUpdate, posIndex, posList, vertices, gl, program){
+    const interval = 1000;
+    if (timeStamp - lastUpdate.valor > interval){
+        updatePos(posIndex, posList, vertices);
+        lastUpdate.valor = timeStamp; // Verificar se o tipo objeto funciona
+    }
+    drawPoint(gl, program, vertices);
+    requestAnimationFrame((timeStamp) =>
+            render(timeStamp, lastUpdate, posIndex, posList, vertices, gl, program));
+    // requestAnimationFrame(render);
+}

@@ -80,7 +80,7 @@ export function updatePos(posIndex, posList, vertices){
 
 // Conferir se a função está funcionando corretamente com export
 export function render(timeStamp, lastUpdate, posIndex, posList, vertices, gl, program){
-    const interval = 1000;
+    const interval = 500;
     if (timeStamp - lastUpdate.valor > interval){
         updatePos(posIndex, posList, vertices);
         lastUpdate.valor = timeStamp; // Verificar se o tipo objeto funciona
@@ -90,3 +90,14 @@ export function render(timeStamp, lastUpdate, posIndex, posList, vertices, gl, p
             render(timeStamp, lastUpdate, posIndex, posList, vertices, gl, program));
     // requestAnimationFrame(render);
 }
+
+const trianglePos = new Float32Array([
+    -0.5,-0.5, 0.5,-0.5, 0.5,0.5, // Triangulo 1
+    -0.5,-0.5, -0.5,0.5, 0.5,0.5, // Triangulo 2
+])
+
+// Representa as coordenadas dentro do quadrado??
+const texCoords = new Float32Array([
+    0.0, 0.0,   1.0, 0.0,   1.0, 1.0,
+    0.0, 0.0,   1.0, 1.0,   0.0, 1.0,
+]);

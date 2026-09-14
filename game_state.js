@@ -12,12 +12,13 @@ export function createGameState(){
     return {
         atual: states.MENU,
         spawnTimer: 0.0,
-        spawnInterval: 10.0, // 10 segundos entre cada inimigo
+        spawnInterval: 4.0, // 10 segundos entre cada inimigo
     };
 }
 
 function update(dt, entities, stateAtual) {
     const torre = entities.find(e => e.type === "torre");
+    console.log("HP atual: " + torre.hp);
     const novasEntidades = []; // projéteis criados nesse frame entram aqui
     // Adicionar no proprio array sendo iterado deu problema
 
@@ -94,11 +95,32 @@ export function createGameLoop(gl, renderState, entities, stateAtual) {
 }
 
 // Factory para cada tipo de inimigo
+function createSpawnPosition(scale) {
+    const worldHalfSize = 1.5; // Tamanho da projeção para spawnar do lado de fora da arena
+    const limiteVisao = worldHalfSize + scale; // Ponto de spawn é tamanho do mundo + tamanho do inimigo
+    const pontoDaBorda = Math.random() * (worldHalfSize * 2) - worldHalfSize; // Ponto de spawn naquela borda
+    const borda = Math.floor(Math.random() * 4); // Borda escolhida para o spawn do inimigo
+
+    switch (borda) {
+        case 0:
+            return {x: limiteVisao, y: pontoDaBorda};
+            //
+        case 1:
+            return {x: -limiteVisao, y: pontoDaBorda};
+        case 2:
+            return {x: pontoDaBorda, y: limiteVisao};
+        default:
+            return {x: pontoDaBorda, y: -limiteVisao};
+    }
+}
+
 function spawnEnemyMelee(entities) {
+    const spawnPosition = createSpawnPosition(0.15);
+
     entities.push({
         type: "enemyMelee",
-        x: (Math.random() * 3 - 1.5),
-        y: (Math.random() * 3 - 1.5),
+        x: spawnPosition.x,
+        y: spawnPosition.y,
         hp: 20,
         speed: 0.3,
         scale: 0.15,
@@ -111,10 +133,12 @@ function spawnEnemyMelee(entities) {
 }
 
 function spawnEnemyRanged(entities) {
+    const spawnPosition = createSpawnPosition(0.15);
+
     entities.push({
         type: "enemyRanged",
-        x: (Math.random() * 3 - 1.5),
-        y: (Math.random() * 3 - 1.5),
+        x: spawnPosition.x,
+        y: spawnPosition.y,
         hp: 15,
         speed: 0.25,
         scale: 0.15,
@@ -129,10 +153,12 @@ function spawnEnemyRanged(entities) {
 }
 
 function spawnEnemyExploder(entities) {
+    const spawnPosition = createSpawnPosition(0.15);
+
     entities.push({
         type: "enemyExploder",
-        x: (Math.random() * 3 - 1.5),
-        y: (Math.random() * 3 - 1.5),
+        x: spawnPosition.x,
+        y: spawnPosition.y,
         hp: 10,
         speed: 0.4,
         scale: 0.15,
@@ -153,8 +179,15 @@ function spawnProjectile(entities, origin, target, dano, speed) {
         dano,
         scale: 0.05,
         color: [1.0, 1.0, 0.3, 1.0],
-        modelMatrix: mat4.create(),
+        modelMatrix: createModelMatrix(origin.x, origin.y, 0.05),
     });
+}
+
+function createModelMatrix(x, y, scale) {
+    const modelMatrix = mat4.create();
+    mat4.translate(modelMatrix, modelMatrix, [x, y, 0]);
+    mat4.scale(modelMatrix, modelMatrix, [scale, scale, 1]);
+    return modelMatrix;
 }
 
 // Separando o comportamento de cada inimigo
@@ -203,7 +236,7 @@ function criarProjectile(entity, torre) {
         dano: entity.dano,
         scale: 0.05,
         color: [1.0, 1.0, 0.3, 1.0],
-        modelMatrix: mat4.create(),
+        modelMatrix: createModelMatrix(entity.x, entity.y, 0.05),
     };
 }
 

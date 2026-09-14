@@ -117,35 +117,21 @@ function createOrthogonalMatrix(left, right, bottom, top, near, far) {
     return out;
 }
 
-function drawSquare(gl, data, vertexPoisiton, colorPosition, color){
-    // Configura cor do quadrado
-    gl.uniform4fv(colorPosition, color);
-    // const vao = createVao(gl);
-
-    // const vbo = createVbo(gl, data, gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(vertexPoisiton);
-    gl.vertexAttribPointer(vertexPoisiton, 2, gl.FLOAT, false, 0, 0);
-
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-}
-
 // Conferir se a função está funcionando corretamente com export
 export function render(gl, state, entities){
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    const projLocation = gl.getUniformLocation(state.program, "u_projection");
+    const colorPositionLocation = gl.getUniformLocation(state.program, "u_color");
+    const vertexPositionLocation = gl.getAttribLocation(state.program, "position");
 
     gl.bindVertexArray(state.squareVao);
+    gl.uniformMatrix4fv(projLocation, false, projectionMatrix);
 
     for (const entity of entities){
         gl.uniformMatrix4fv(state.modelLocation, false, entity.modelMatrix);
         gl.uniform4fv(state.colorLocation, entity.color);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
-    
-    const colorPositionLocation = gl.getUniformLocation(state.program, "u_color");
-    const projLocation = gl.getUniformLocation(state.program, "u_projection");
-
-    gl.uniformMatrix4fv(projLocation, false, projectionMatrix);
-    
-    const vertexPositionLocation = gl.getAttribLocation(state.program, "position");
-    drawSquare(gl, square, vertexPositionLocation, colorPositionLocation, [1.0, 1.0, 1.0, 1.0]);
 }
+
+// , spawnEnemyMelee, spawnEnemyRanged, spawnEnemyExploder

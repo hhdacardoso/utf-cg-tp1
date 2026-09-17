@@ -6,7 +6,23 @@
         <link rel="stylesheet" href="index.css" type="text/css" />
     </head>
     <body>
-        <canvas id="glcanvas" width="680" height="680"></canvas>
+        <main class="game-container">
+            <canvas id="glcanvas" width="680" height="680"></canvas>
+            <section class="health-display" aria-label="Vida da torre">
+                <div class="health-bar">
+                    <div id="tower-health" class="health-bar-fill"></div>
+                    <span id="tower-health-text" class="health-bar-text">1500</span>
+                </div>
+            </section>
+            <section id="menu" class="menu" aria-label="Menu principal">
+                <h1>Tower Defense</h1>
+                <button id="start-button" type="button">Iniciar</button>
+            </section>
+            <section id="game-over-menu" class="menu" aria-label="Fim de jogo" hidden>
+                <h1>GAME OVER</h1>
+                <button id="restart-button" type="button">Reiniciar</button>
+            </section>
+        </main>
     </body>
 
     <script type="shader/vertex">
@@ -35,7 +51,7 @@
 
     <script type="module">
         import {setupWebGL, initialize, render, resizeCanvas} from "./main.js";
-        import {createGameLoop, createGameState, states} from "./game_state.js";
+        import {createGameLoop, createGameState, handleCanvasClick, states} from "./game_state.js";
         import { mat4 } from "https://cdn.jsdelivr.net/npm/gl-matrix@3.4.3/esm/index.js";
 
         let lastTime = 0;
@@ -43,8 +59,15 @@
             {type: "torre",
                 x:0, y:0,
                 hp:1500,
+                maxHp:1500,
                 color: [0.2, 0.6, 1.0, 1.0],
                 scale: 0.3,
+                dano: 5,
+                clickDamage: 5,
+                attackRange: 1.0,
+                attackInterval: 0.4,
+                attackCooldown: 0,
+                projectileSpeed: 2.0,
                 modelMatrix: mat4.create(),
             }
         ]
@@ -60,8 +83,38 @@
         console.log("colorLocation:", program.colorLocation);
         console.log("program:", program.program);
 
+        // Inicia o jogo no MENU
         const stateAtual = createGameState();
-        stateAtual.atual = states.JOGANDO;
+        const menu = document.querySelector("#menu");
+        const startButton = document.querySelector("#start-button");
+        const gameOverMenu = document.querySelector("#game-over-menu");
+        const restartButton = document.querySelector("#restart-button");
+        const towerHealth = document.querySelector("#tower-health");
+        const towerHealthText = document.querySelector("#tower-health-text");
+
+        stateAtual.onUpdate = torre => {
+            const healthPercentage = Math.max(0, Math.min(100, (torre.hp / torre.maxHp) * 100));
+            towerHealth.style.width = `${healthPercentage}%`;
+            towerHealthText.textContent = `${Math.max(0, Math.ceil(torre.hp))}`;
+        };
+
+        stateAtual.onGameOver = () => {
+            gameOverMenu.hidden = false;
+        };
+
+        startButton.addEventListener("click", () => {
+            stateAtual.atual = states.JOGANDO;
+            menu.hidden = true;
+        });
+
+        restartButton.addEventListener("click", () => {
+            window.location.reload();
+        });
+
+        // Dano nos inimigos ao clicar neles
+        canvas.addEventListener("click", event => {
+            handleCanvasClick(canvas, event, entities, stateAtual);
+        });
 
         const gameLoop = createGameLoop(gl, program, entities, stateAtual);
         

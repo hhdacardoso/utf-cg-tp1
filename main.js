@@ -1,6 +1,6 @@
 import { mat4 } from "https://cdn.jsdelivr.net/npm/gl-matrix@3.4.3/esm/index.js";
 
-const worldHalfSize = 1.5;
+const worldHalfSize = 1.5; // Tamanho real da matriz de projeção
 const projectionMatrix = createOrthogonalMatrix(-worldHalfSize, worldHalfSize, -worldHalfSize, worldHalfSize, -1, 1);
 
 const square = new Float32Array
@@ -39,7 +39,6 @@ export function resizeCanvas(gl, canvas) {
 }
 
 export function initialize(gl){
-    
     // Códigos dos shaders do HTML
     const vertexShaderCode = document.querySelector('[type="shader/vertex"]').textContent.trim();
     const fragmentShaderCode = document.querySelector('[type="shader/fragment"]').textContent.trim();
@@ -133,5 +132,3 @@ export function render(gl, state, entities){
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
 }
-
-// , spawnEnemyMelee, spawnEnemyRanged, spawnEnemyExploder

@@ -22,7 +22,9 @@ export function setupWebGL(){
         throw new Error('WebGL2 não suportado');
     }
     gl.viewport(0, 0, canvas.width, canvas.height)
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clearColor(0.0, 0.0, 0.0, 0.0); // transparente: o fundo espacial (CSS) aparece por trás
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     
     return {gl, canvas};
 }
@@ -62,8 +64,35 @@ export function initialize(gl){
         squareVao: vao,
         colorLocation: gl.getUniformLocation(program, "u_color"),
         modelLocation: gl.getUniformLocation(program, "u_model"),
-        projectionLocation: gl.getUniformLocation(program, "u_projection")
+        projectionLocation: gl.getUniformLocation(program, "u_projection"),
+        textureLocation: gl.getUniformLocation(program, "u_texture"),
+        useTextureLocation: gl.getUniformLocation(program, "u_useTexture"),
     };
+}
+
+// Carrega uma imagem e sobe pra GPU como textura. É assíncrono (a imagem
+// carrega em paralelo), por isso devolve uma Promise: quem chamar precisa
+// dar "await" antes de usar a textura.
+export function carregarTextura(gl, url) {
+    return new Promise((resolve, reject) => {
+        const imagem = new Image();
+        imagem.onload = () => {
+            const textura = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, textura);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imagem);
+
+            // MIN precisa de mipmap (ela encolhe na tela); MAG fica só linear.
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.generateMipmap(gl.TEXTURE_2D);
+
+            resolve(textura);
+        };
+        imagem.onerror = () => reject(new Error(`Não consegui carregar a textura: ${url}`));
+        imagem.src = url;
+    });
 }
 
 function createProgram(gl, vertexShader, fragmentShader){
@@ -119,16 +148,28 @@ function createOrthogonalMatrix(left, right, bottom, top, near, far) {
 // Conferir se a função está funcionando corretamente com export
 export function render(gl, state, entities){
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    const projLocation = gl.getUniformLocation(state.program, "u_projection");
-    const colorPositionLocation = gl.getUniformLocation(state.program, "u_color");
-    const vertexPositionLocation = gl.getAttribLocation(state.program, "position");
 
     gl.bindVertexArray(state.squareVao);
-    gl.uniformMatrix4fv(projLocation, false, projectionMatrix);
+    gl.uniformMatrix4fv(state.projectionLocation, false, projectionMatrix);
 
     for (const entity of entities){
         gl.uniformMatrix4fv(state.modelLocation, false, entity.modelMatrix);
-        gl.uniform4fv(state.colorLocation, entity.color);
+
+        if (entity.texturaFrames) {
+            // Entidade com sprite: desenha a textura do frame atual da animação.
+            // u_color vira só um "tingimento" (branco = mostra a textura sem alterar cor).
+            const frame = entity.texturaFrames[entity.animFrame ?? 0];
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, frame);
+            gl.uniform1i(state.textureLocation, 0);
+            gl.uniform1i(state.useTextureLocation, 1);
+            gl.uniform4fv(state.colorLocation, entity.tint ?? [1.0, 1.0, 1.0, 1.0]);
+        } else {
+            // Caminho original: quadrado com cor sólida (torre, decor, projéteis)
+            gl.uniform1i(state.useTextureLocation, 0);
+            gl.uniform4fv(state.colorLocation, entity.color);
+        }
+
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
 }

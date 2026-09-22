@@ -8,6 +8,13 @@
     <body>
         <main class="game-container">
             <canvas id="glcanvas" width="680" height="680"></canvas>
+            <button id="mute-button" class="mute-button" type="button" aria-label="Ligar ou desligar o som ambiente">🔊</button>
+            <button id="options-button" class="options-button" type="button" aria-label="Opções">⚙️</button>
+            <section class="score-display" aria-label="Pontuação">
+                <span>PONTOS</span>
+                <strong id="score-value">0</strong>
+                <span id="kill-count" class="score-kills">0 abates</span>
+            </section>
             <section class="health-display" aria-label="Vida da torre">
                 <div class="health-bar">
                     <div id="tower-health" class="health-bar-fill"></div>
@@ -17,10 +24,47 @@
             <section id="menu" class="menu" aria-label="Menu principal">
                 <h1>Tower Defense</h1>
                 <button id="start-button" type="button">Iniciar</button>
+                <button id="credits-button" type="button" class="secondary-button">Créditos</button>
             </section>
             <section id="game-over-menu" class="menu" aria-label="Fim de jogo" hidden>
                 <h1>GAME OVER</h1>
+                <p id="final-score" class="final-score">Pontuação: 0</p>
                 <button id="restart-button" type="button">Reiniciar</button>
+            </section>
+            <section id="credits-menu" class="menu" aria-label="Créditos" hidden>
+                <h1>Créditos</h1>
+                <div class="credits-block">
+                    <p class="credits-role">Desenvolvido por</p>
+                    <p class="credits-names">Hugo</p>
+                    <p class="credits-names">Custódio</p>
+                    <div class="credits-divider"></div>
+                    <p class="credits-info">Trabalho Prático de Computação Gráfica</p>
+                    <p class="credits-info">Professor Coutinho</p>
+                </div>
+                <button id="credits-back-button" type="button" class="secondary-button">Voltar</button>
+            </section>
+            <section id="pause-menu" class="menu" aria-label="Opções" hidden>
+                <h1>Opções</h1>
+                <label class="volume-control" for="volume-slider">
+                    Som
+                    <input type="range" id="volume-slider" min="0" max="100" value="100">
+                    <span id="volume-value">100%</span>
+                </label>
+                <button id="resume-button" type="button">Continuar</button>
+                <button id="pause-restart-button" type="button" class="secondary-button">Reiniciar</button>
+                <button id="finish-button" type="button" class="danger-button">Finalizar</button>
+            </section>
+            <section id="end-menu" class="menu" aria-label="Jogo encerrado" hidden>
+                <h1>Até a próxima!</h1>
+                <div class="credits-block">
+                    <p class="credits-role">Obrigado por jogar</p>
+                    <p class="credits-names">Hugo</p>
+                    <p class="credits-names">Custódio</p>
+                    <div class="credits-divider"></div>
+                    <p class="credits-info">Trabalho Prático de Computação Gráfica</p>
+                    <p class="credits-info">Professor Coutinho</p>
+                </div>
+                <button id="play-again-button" type="button">Jogar novamente</button>
             </section>
         </main>
     </body>
@@ -31,8 +75,12 @@
         in vec2 position;
         uniform mat4 u_projection;
         uniform mat4 u_model;
+        out vec2 v_uv;
 
         void main(){
+            // O quad vai de -1 a 1; transforma pra 0..1 pra virar coordenada de textura.
+            // v (vertical) invertido porque textura de imagem cresce pra baixo, mundo cresce pra cima.
+            v_uv = vec2((position.x + 1.0) * 0.5, 1.0 - (position.y + 1.0) * 0.5);
             gl_Position = u_projection * u_model * vec4(position, 0.0, 1.0);
         }
     </script>
@@ -41,35 +89,48 @@
         #version 300 es
 
         precision highp float;
+        in vec2 v_uv;
         out vec4 outColor;
         uniform vec4 u_color;
+        uniform sampler2D u_texture;
+        uniform bool u_useTexture;
 
         void main(){
-            outColor = u_color;
+            if (u_useTexture) {
+                // u_color funciona como "tingimento": multiplica a textura (branco = sem alterar)
+                outColor = texture(u_texture, v_uv) * u_color;
+            } else {
+                outColor = u_color;
+            }
         }
     </script>
 
     <script type="module">
-        import {setupWebGL, initialize, render, resizeCanvas} from "./main.js";
-        import {createGameLoop, createGameState, handleCanvasClick, states} from "./game_state.js";
+        import {setupWebGL, initialize, render, resizeCanvas, carregarTextura} from "./main.js";
+        import {createGameLoop, createGameState, handleCanvasClick, states, iniciarSomAmbiente, alternarSomAmbiente, pararSomAmbiente, definirVolume} from "./game_state.js";
         import { mat4 } from "https://cdn.jsdelivr.net/npm/gl-matrix@3.4.3/esm/index.js";
 
         let lastTime = 0;
         let entities = [
+            // Corpo da torre-guardiã: agora é um sprite desenhado, não mais quadrados empilhados.
+            // texturaFrames é preenchido depois que a textura carrega (mais abaixo no script).
             {type: "torre",
                 x:0, y:0,
                 hp:1500,
                 maxHp:1500,
-                color: [0.2, 0.6, 1.0, 1.0],
-                scale: 0.3,
+                color: [0.40, 0.62, 0.92, 1.0], // usado só se a textura falhar ao carregar
+                scale: 0.42, // um pouco maior que antes: o sprite tem "respiro" (halo/asas) em volta
                 dano: 5,
                 clickDamage: 5,
                 attackRange: 1.0,
                 attackInterval: 0.4,
                 attackCooldown: 0,
                 projectileSpeed: 2.0,
+                animFrame: 0,
+                animTimer: 0,
+                animInterval: 0.9, // pulsar do reator: lento, é "respiração" e não passo
                 modelMatrix: mat4.create(),
-            }
+            },
         ]
 
         const {gl, canvas} = setupWebGL();
@@ -78,19 +139,74 @@
         window.addEventListener("resize", () => resizeCanvas(gl, canvas));
 
         const program = initialize(gl);
-        console.log("modelLocation:", program.modelLocation);
-        console.log("projectionLocation:", program.projectionLocation);
-        console.log("colorLocation:", program.colorLocation);
-        console.log("program:", program.program);
 
-        // Inicia o jogo no MENU
-        const stateAtual = createGameState();
+        // Referências de DOM que já precisamos antes de começar a carregar as texturas
         const menu = document.querySelector("#menu");
         const startButton = document.querySelector("#start-button");
         const gameOverMenu = document.querySelector("#game-over-menu");
         const restartButton = document.querySelector("#restart-button");
         const towerHealth = document.querySelector("#tower-health");
         const towerHealthText = document.querySelector("#tower-health-text");
+        const scoreValue = document.querySelector("#score-value");
+        const killCount = document.querySelector("#kill-count");
+        const finalScore = document.querySelector("#final-score");
+        const muteButton = document.querySelector("#mute-button");
+        const optionsButton = document.querySelector("#options-button");
+        const creditsButton = document.querySelector("#credits-button");
+        const creditsMenu = document.querySelector("#credits-menu");
+        const creditsBackButton = document.querySelector("#credits-back-button");
+        const pauseMenu = document.querySelector("#pause-menu");
+        const resumeButton = document.querySelector("#resume-button");
+        const pauseRestartButton = document.querySelector("#pause-restart-button");
+        const finishButton = document.querySelector("#finish-button");
+        const volumeSlider = document.querySelector("#volume-slider");
+        const volumeValue = document.querySelector("#volume-value");
+        const endMenu = document.querySelector("#end-menu");
+        const playAgainButton = document.querySelector("#play-again-button");
+
+        // Sprites: 2 frames por tipo de inimigo (ciclo de passo) + 2 frames da torre (pulso do reator).
+        // São desenhos originais (não são do Halo nem de nenhuma franquia licenciada).
+        const arquivosDeSprite = {
+            melee: ["sprites/enemy_melee_0.png", "sprites/enemy_melee_1.png"],
+            ranged: ["sprites/enemy_ranged_0.png", "sprites/enemy_ranged_1.png"],
+            exploder: ["sprites/enemy_exploder_0.png", "sprites/enemy_exploder_1.png"],
+            torre: ["sprites/tower_0.png", "sprites/tower_1.png"],
+            missile: ["sprites/missile_0.png", "sprites/missile_1.png"],
+        };
+
+        async function carregarTexturasInimigos() {
+            const entradas = await Promise.all(
+                Object.entries(arquivosDeSprite).map(async ([tipo, arquivos]) => {
+                    const frames = await Promise.all(arquivos.map(url => carregarTextura(gl, url)));
+                    return [tipo, frames];
+                })
+            );
+            return Object.fromEntries(entradas);
+        }
+
+        // Trava o botão enquanto carrega, pra não iniciar o jogo sem os sprites prontos
+        startButton.disabled = true;
+        startButton.textContent = "Carregando...";
+
+        let texturas = null;
+        try {
+            texturas = await carregarTexturasInimigos();
+        } catch (erro) {
+            // Se falhar (ex: arquivo faltando), o jogo continua funcionando com
+            // quadrados coloridos no lugar do sprite — ver o "?." em cada spawn.
+            console.error("Não consegui carregar os sprites dos inimigos:", erro);
+        }
+
+        startButton.disabled = false;
+        startButton.textContent = "Iniciar";
+
+        // A torre é a entidade[0] no array inicial; se a textura carregou, anexa os frames nela
+        if (texturas?.torre) {
+            entities[0].texturaFrames = texturas.torre;
+        }
+
+        // Inicia o jogo no MENU
+        const stateAtual = createGameState(texturas);
 
         stateAtual.onUpdate = torre => {
             const healthPercentage = Math.max(0, Math.min(100, (torre.hp / torre.maxHp) * 100));
@@ -98,17 +214,82 @@
             towerHealthText.textContent = `${Math.max(0, Math.ceil(torre.hp))}`;
         };
 
+        // Atualiza o HUD de pontuação (só é chamado quando um inimigo morre)
+        stateAtual.onScoreChange = state => {
+            scoreValue.textContent = state.score;
+            killCount.textContent = `${state.kills} ${state.kills === 1 ? "abate" : "abates"}`;
+        };
+
         stateAtual.onGameOver = () => {
+            finalScore.textContent = `Pontuação: ${stateAtual.score} (${stateAtual.kills} abates)`;
             gameOverMenu.hidden = false;
         };
 
         startButton.addEventListener("click", () => {
             stateAtual.atual = states.JOGANDO;
             menu.hidden = true;
+            iniciarSomAmbiente(); // precisa ser dentro de um clique real (política de autoplay do navegador)
+        });
+
+        muteButton.addEventListener("click", () => {
+            const tocando = alternarSomAmbiente();
+            muteButton.textContent = tocando ? "🔊" : "🔇";
         });
 
         restartButton.addEventListener("click", () => {
             window.location.reload();
+        });
+
+        // --- Créditos (a partir do menu principal) ---
+        creditsButton.addEventListener("click", () => {
+            menu.hidden = true;
+            creditsMenu.hidden = false;
+        });
+        creditsBackButton.addEventListener("click", () => {
+            creditsMenu.hidden = true;
+            menu.hidden = false;
+        });
+
+        // --- Tela de Opções: pausa o jogo, permite continuar, reiniciar, finalizar e ajustar o som ---
+        let estadoAntesDePausar = states.MENU;
+
+        function abrirOpcoes() {
+            // Guarda em qual tela estava (JOGANDO, MENU ou FIM) pra "Continuar" voltar certo
+            estadoAntesDePausar = stateAtual.atual;
+            if (estadoAntesDePausar === states.FINALIZADO) return; // já encerrou, não tem o que pausar
+
+            menu.hidden = true;
+            gameOverMenu.hidden = true;
+            creditsMenu.hidden = true;
+            pauseMenu.hidden = false;
+            stateAtual.atual = states.PAUSADO;
+        }
+
+        function fecharOpcoes() {
+            pauseMenu.hidden = true;
+            stateAtual.atual = estadoAntesDePausar;
+            if (estadoAntesDePausar === states.MENU) menu.hidden = false;
+            if (estadoAntesDePausar === states.FIM) gameOverMenu.hidden = false;
+        }
+
+        optionsButton.addEventListener("click", abrirOpcoes);
+        resumeButton.addEventListener("click", fecharOpcoes);
+        pauseRestartButton.addEventListener("click", () => window.location.reload());
+
+        finishButton.addEventListener("click", () => {
+            pauseMenu.hidden = true;
+            endMenu.hidden = false;
+            stateAtual.atual = states.FINALIZADO;
+            pararSomAmbiente();
+        });
+
+        playAgainButton.addEventListener("click", () => {
+            window.location.reload();
+        });
+
+        volumeSlider.addEventListener("input", () => {
+            definirVolume(volumeSlider.value / 100);
+            volumeValue.textContent = `${volumeSlider.value}%`;
         });
 
         // Dano nos inimigos ao clicar neles

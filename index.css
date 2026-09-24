@@ -280,34 +280,36 @@ canvas, body {
 /* Bloco de créditos, usado na tela de Créditos e na tela final */
 .credits-block {
     text-align: center;
-    padding: 2px 12px;
+    padding: 2px 16px;
+}
+.credits-group + .credits-group {
+    margin-top: 16px;
 }
 .credits-role {
     margin: 0 0 8px;
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     letter-spacing: 3px;
     text-transform: uppercase;
     color: #6ec8ff;
 }
 .credits-names {
-    margin: 4px 0;
-    font-size: 1.2rem;
+    margin: 2px 0;
+    font-size: 1.05rem;
     font-weight: 600;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     color: #ffffff;
-    text-shadow: 0 0 12px rgba(110, 200, 255, 0.4);
 }
 .credits-divider {
-    width: 70px;
+    width: 60px;
     height: 1px;
-    margin: 14px auto;
-    background: linear-gradient(90deg, transparent, rgba(110, 190, 255, 0.55), transparent);
+    margin: 16px auto;
+    background: linear-gradient(90deg, transparent, rgba(110, 190, 255, 0.5), transparent);
 }
 .credits-info {
-    margin: 4px 0 0;
+    margin: 2px 0;
     font-size: 0.82rem;
-    letter-spacing: 0.5px;
-    color: rgba(220, 235, 255, 0.62);
+    letter-spacing: 0.4px;
+    color: rgba(220, 235, 255, 0.68);
 }
 
 /* Controle de volume na tela de Opções */

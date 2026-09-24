@@ -331,3 +331,47 @@ canvas, body {
     text-shadow: 0 0 8px rgba(110, 200, 255, 0.5);
     letter-spacing: 0;
 }
+
+/* Logo do menu principal (reaproveita o sprite da torre), com flutuação e brilho sutis */
+.menu-logo {
+    width: 108px;
+    height: 108px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 18px rgba(90, 170, 255, 0.55));
+    animation: menuLogoFloat 3.6s ease-in-out infinite;
+    margin-bottom: -6px;
+}
+@keyframes menuLogoFloat {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-8px); }
+}
+
+/* Etiqueta pequena acima do título */
+.menu-eyebrow {
+    margin: 0;
+    font-size: 0.72rem;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: #6ec8ff;
+    text-shadow: 0 0 10px rgba(110, 200, 255, 0.5);
+}
+
+/* Subtítulo/descrição abaixo do título */
+.menu-tagline {
+    margin: -8px 0 4px;
+    max-width: 340px;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    text-align: center;
+    color: rgba(220, 235, 255, 0.65);
+    letter-spacing: 0.3px;
+}
+
+/* O menu principal ganha mais respiro vertical por ter mais conteúdo agora */
+#menu {
+    gap: 10px;
+    padding: 32px 28px;
+}
+#menu #start-button {
+    margin-top: 10px;
+}

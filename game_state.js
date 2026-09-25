@@ -5,8 +5,8 @@ import {render} from "./main.js";
 export const caminhoInimigos = [
     { x: -1.7, y: 1.05 },
     { x: -1.05, y: 1.05 },
-    { x: -1.05, y: 0.45 },
-    { x: 0.75, y: 0.45 },
+    { x: -1.05, y: 0.6 },
+    { x: 0.75, y: 0.6 },
     { x: 0.75, y: -0.45 },
     { x: 0, y: -0.45 },
     { x: 0, y: 0 },
@@ -236,8 +236,8 @@ export function createGameState(texturas = null){
 
         // --- Controle de spawn com frequência variável ---
         spawnTimer: 0.0,
-        spawnInterval: 1.5,          // intervalo sorteado para o PRÓXIMO inimigo
-        spawnIntervalBase: 1.5,      // intervalo no começo da partida
+        spawnInterval: 1.0,          // intervalo sorteado para o PRÓXIMO inimigo
+        spawnIntervalBase: 1.2,      // intervalo no começo da partida
         spawnIntervalMinimo: 0.25,   // piso: nunca fica mais rápido que isso
         meiaVidaSpawn: 30.0,         // a cada 30s o intervalo médio cai pela metade
         variacaoSpawn: 0.35,         // jitter de +/- 35% para não ficar metronômico
@@ -248,7 +248,7 @@ export function createGameState(texturas = null){
         kills: 0,
 
         // --- Chefão (boss) ---
-        bossScoreThreshold: 50, // pontuação que invoca o chefão (ajustável)
+        bossScoreThreshold: 450, // pontuação que invoca o chefão (ajustável)
         bossInvocado: false,    // já foi invocado nessa partida? (só acontece uma vez)
         bossPendente: false,    // marcado no frame do abate; o spawn de verdade acontece no fim do update()
 
@@ -432,7 +432,7 @@ export function createGameLoop(gl, renderState, entities, stateAtual) {
         switch(stateAtual.atual){
             case states.JOGANDO:
                 update(dt, entities, stateAtual);
-                render(gl, renderState, entities);
+                render(gl, renderState, entities, stateAtual.bossInvocado ? null : caminhoInimigos);
                 break;
             case states.MENU:
                 // Limpa a tela e inicia o menu
@@ -441,11 +441,11 @@ export function createGameLoop(gl, renderState, entities, stateAtual) {
                 break;
             case states.FIM:
                 // Mostrar um menu de opções com a tela final ainda renderizada
-                render(gl, renderState, entities);
+                render(gl, renderState, entities, stateAtual.bossInvocado ? null : caminhoInimigos);
                 break;
             case states.PAUSADO:
                 // Congela a cena (não chama update), só continua desenhando o último estado
-                render(gl, renderState, entities);
+                render(gl, renderState, entities, stateAtual.bossInvocado ? null : caminhoInimigos);
                 break;
             case states.FINALIZADO:
                 // Jogador encerrou pela tela de opções: fundo espacial limpo, sem entidades
@@ -601,7 +601,7 @@ function createSpawnPosition(scale) {
     const worldHalfSize = 1.5; // Tamanho da projeção para spawnar do lado de fora da arena
     const limiteVisao = worldHalfSize + scale; // Ponto de spawn é tamanho do mundo + tamanho do inimigo
     const pontoDaBorda = Math.random() * (worldHalfSize * 2) - worldHalfSize; // Ponto de spawn naquela borda
-    const borda = Math.floor(Math.random() * 4); // Borda escolhida para o spawn do inimigo
+    const borda = Math.floor(Math.random() * 3); // Borda escolhida para o spawn do inimigo
     
     switch (borda) {
         case 0:
@@ -610,13 +610,10 @@ function createSpawnPosition(scale) {
             case 1:
                 return {x: -limiteVisao, y: pontoDaBorda};
             // Nasce na esquerda
-            case 2:
-                return {x: pontoDaBorda, y: limiteVisao};
-                // Nasce em cima
-                default:
-                    return {x: pontoDaBorda, y: -limiteVisao};
-                    // Nasce em baixo
-                }
+            default:
+                return {x: pontoDaBorda, y: -limiteVisao};
+            // Nasce em baixo
+            }
             }
             
 // Factory para cada tipo de inimigo

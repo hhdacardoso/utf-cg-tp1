@@ -34,13 +34,20 @@
                 <p id="final-score" class="final-score">Pontuação: 0</p>
                 <button id="restart-button" type="button">Reiniciar</button>
             </section>
+            <section id="victory-menu" class="menu victory-menu" aria-label="Vitória" hidden>
+                <h1>Vitória</h1>
+                <p class="menu-tagline">O chefão foi derrotado. A galáxia está em paz — por enquanto.</p>
+                <p id="victory-score" class="final-score">Pontuação: 0</p>
+                <button id="victory-restart-button" type="button">Jogar novamente</button>
+                <button id="victory-credits-button" type="button" class="secondary-button">Créditos</button>
+            </section>
             <section id="credits-menu" class="menu" aria-label="Créditos" hidden>
                 <h1>Créditos</h1>
                 <div class="credits-block">
                     <div class="credits-group">
                         <p class="credits-role">Desenvolvedores</p>
-                        <p class="credits-names">Custódio</p>
-                        <p class="credits-names">Hugo</p>
+                        <p class="credits-names">Custódio Junio Queiroz Silva</p>
+                        <p class="credits-names">Hugo Henrique de Andrade Cardoso</p>
                     </div>
                     <div class="credits-divider"></div>
                     <div class="credits-group">
@@ -70,8 +77,8 @@
                 <div class="credits-block">
                     <p class="credits-role">Obrigado por jogar</p>
                     <div class="credits-group">
-                        <p class="credits-names">Custódio</p>
-                        <p class="credits-names">Hugo</p>
+                        <p class="credits-names">Custódio Junio Queiroz Silva</p>
+                        <p class="credits-names">Hugo Henrique de Andrade Cardoso</p>
                     </div>
                     <div class="credits-divider"></div>
                     <div class="credits-group">
@@ -178,13 +185,17 @@
         const volumeValue = document.querySelector("#volume-value");
         const endMenu = document.querySelector("#end-menu");
         const playAgainButton = document.querySelector("#play-again-button");
+        const victoryMenu = document.querySelector("#victory-menu");
+        const victoryScore = document.querySelector("#victory-score");
+        const victoryRestartButton = document.querySelector("#victory-restart-button");
+        const victoryCreditsButton = document.querySelector("#victory-credits-button");
 
         // Sprites: 2 frames por tipo de inimigo (ciclo de passo) + 2 frames da torre (pulso do reator).
-        // São desenhos originais (não são do Halo nem de nenhuma franquia licenciada).
         const arquivosDeSprite = {
             melee: ["sprites/enemy_melee_0.png", "sprites/enemy_melee_1.png"],
             ranged: ["sprites/enemy_ranged_0.png", "sprites/enemy_ranged_1.png"],
             exploder: ["sprites/enemy_exploder_0.png", "sprites/enemy_exploder_1.png"],
+            boss: ["sprites/enemy_boss_0.png", "sprites/enemy_boss_1.png"],
             torre: ["sprites/tower_0.png", "sprites/tower_1.png"],
             missile: ["sprites/missile_0.png", "sprites/missile_1.png"],
         };
@@ -240,6 +251,11 @@
             gameOverMenu.hidden = false;
         };
 
+        stateAtual.onVictory = () => {
+            victoryScore.textContent = `Pontuação: ${stateAtual.score} (${stateAtual.kills} abates)`;
+            victoryMenu.hidden = false;
+        };
+
         startButton.addEventListener("click", () => {
             stateAtual.atual = states.JOGANDO;
             menu.hidden = true;
@@ -255,27 +271,39 @@
             window.location.reload();
         });
 
-        // --- Créditos (a partir do menu principal) ---
-        creditsButton.addEventListener("click", () => {
-            menu.hidden = true;
+        // --- Créditos: pode ser aberto do menu principal ou da tela de vitória ---
+        let telaAntesDosCreditos = menu;
+
+        function abrirCreditos(origem) {
+            telaAntesDosCreditos = origem;
+            origem.hidden = true;
             creditsMenu.hidden = false;
-        });
+        }
+        creditsButton.addEventListener("click", () => abrirCreditos(menu));
+        victoryCreditsButton.addEventListener("click", () => abrirCreditos(victoryMenu));
         creditsBackButton.addEventListener("click", () => {
             creditsMenu.hidden = true;
-            menu.hidden = false;
+            telaAntesDosCreditos.hidden = false;
+        });
+
+        victoryRestartButton.addEventListener("click", () => {
+            window.location.reload();
         });
 
         // --- Tela de Opções: pausa o jogo, permite continuar, reiniciar, finalizar e ajustar o som ---
         let estadoAntesDePausar = states.MENU;
+        let telaAntesDePausar = null; // qual <section> estava visível (null = JOGANDO puro, sem overlay)
 
         function abrirOpcoes() {
-            // Guarda em qual tela estava (JOGANDO, MENU ou FIM) pra "Continuar" voltar certo
             estadoAntesDePausar = stateAtual.atual;
             if (estadoAntesDePausar === states.FINALIZADO) return; // já encerrou, não tem o que pausar
 
-            menu.hidden = true;
-            gameOverMenu.hidden = true;
-            creditsMenu.hidden = true;
+            // Descobre qual tela está de fato visível agora (FIM serve tanto pra derrota
+            // quanto pra vitória, então não dá pra confiar só no "estado" pra saber qual mostrar depois)
+            telaAntesDePausar = [menu, gameOverMenu, victoryMenu, creditsMenu]
+                .find(secao => !secao.hidden) ?? null;
+
+            if (telaAntesDePausar) telaAntesDePausar.hidden = true;
             pauseMenu.hidden = false;
             stateAtual.atual = states.PAUSADO;
         }
@@ -283,8 +311,7 @@
         function fecharOpcoes() {
             pauseMenu.hidden = true;
             stateAtual.atual = estadoAntesDePausar;
-            if (estadoAntesDePausar === states.MENU) menu.hidden = false;
-            if (estadoAntesDePausar === states.FIM) gameOverMenu.hidden = false;
+            if (telaAntesDePausar) telaAntesDePausar.hidden = false;
         }
 
         optionsButton.addEventListener("click", abrirOpcoes);

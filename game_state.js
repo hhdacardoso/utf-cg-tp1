@@ -1,6 +1,17 @@
 import { mat4 } from "https://cdn.jsdelivr.net/npm/gl-matrix@3.4.3/esm/index.js";
 import {render} from "./main.js";
 
+// Caminho fixo que os inimigos comuns percorrem até a torre (waypoints, em coordenadas de mundo)
+export const caminhoInimigos = [
+    { x: -1.7, y: 1.05 },
+    { x: -1.05, y: 1.05 },
+    { x: -1.05, y: 0.45 },
+    { x: 0.75, y: 0.45 },
+    { x: 0.75, y: -0.45 },
+    { x: 0, y: -0.45 },
+    { x: 0, y: 0 },
+];
+
 // Definição dos estados possíveis do jogo
 export const states = {
     MENU: "MENU",
@@ -236,7 +247,13 @@ export function createGameState(texturas = null){
         score: 0,
         kills: 0,
 
+        // --- Chefão (boss) ---
+        bossScoreThreshold: 50, // pontuação que invoca o chefão (ajustável)
+        bossInvocado: false,    // já foi invocado nessa partida? (só acontece uma vez)
+        bossPendente: false,    // marcado no frame do abate; o spawn de verdade acontece no fim do update()
+
         onGameOver: null,
+        onVictory: null,
         onUpdate: null,
         onScoreChange: null,
     };
@@ -292,6 +309,19 @@ function registrarAbate(entity, stateAtual) {
     stateAtual.kills += 1;
     stateAtual.onScoreChange?.(stateAtual);
     playDeathSound();
+
+    // Ao atingir a pontuação-alvo, invoca o chefão (só uma vez por partida).
+    // O spawn de verdade acontece no fim do update() (ver "bossPendente" lá).
+    if (stateAtual.score >= stateAtual.bossScoreThreshold && !stateAtual.bossInvocado) {
+        stateAtual.bossInvocado = true;
+        stateAtual.bossPendente = true;
+    }
+
+    // Derrotar o chefão é a condição de vitória
+    if (entity.type === "enemyBoss" && stateAtual.atual !== states.FIM) {
+        stateAtual.atual = states.FIM;
+        stateAtual.onVictory?.(stateAtual);
+    }
 }
 
 // Atualização do jogo para definir estados, HPs e posição das entidades
@@ -304,12 +334,15 @@ function update(dt, entities, stateAtual) {
     // Tempo de partida: é o que faz a dificuldade subir
     stateAtual.tempoDecorrido += dt;
 
-    // Timer para spawn de cada inimigo, com intervalo variável
-    stateAtual.spawnTimer -= dt;
-    if (stateAtual.spawnTimer <= 0) {
-        spawnAleatorio(entities, stateAtual);
-        stateAtual.spawnInterval = sortearProximoSpawn(stateAtual);
-        stateAtual.spawnTimer = stateAtual.spawnInterval;
+    // Timer para spawn de cada inimigo, com intervalo variável.
+    // Depois que o boss é invocado, nenhum inimigo comum nasce mais.
+    if (!stateAtual.bossInvocado) {
+        stateAtual.spawnTimer -= dt;
+        if (stateAtual.spawnTimer <= 0) {
+            spawnAleatorio(entities, stateAtual);
+            stateAtual.spawnInterval = sortearProximoSpawn(stateAtual);
+            stateAtual.spawnTimer = stateAtual.spawnInterval;
+        }
     }
 
     // Atualiza vida, alvo e upgrades da torre (se implementar)
@@ -327,6 +360,9 @@ function update(dt, entities, stateAtual) {
                 break;
             case "enemyExploder":
                 updateExploder(entity, torre, dt);
+                break;
+            case "enemyBoss":
+                updateBoss(entity, torre, dt);
                 break;
             case "projectile":
                 updateProjectile(entity, dt, stateAtual);
@@ -350,8 +386,15 @@ function update(dt, entities, stateAtual) {
         ]);
     }
 
-    // adiciona projéteis criados nesse frame depois das atualizações e iterações pela lista
-    entities.push(...novasEntidades);
+    // Se o boss acabou de ser invocado, ele substitui tudo que estiver em campo
+    // (inclusive projéteis criados nesse mesmo frame — por isso o "else")
+    if (stateAtual.bossPendente) {
+        stateAtual.bossPendente = false;
+        spawnEnemyBoss(entities, stateAtual);
+    } else {
+        // adiciona projéteis criados nesse frame depois das atualizações e iterações pela lista
+        entities.push(...novasEntidades);
+    }
 
     // remove entidades marcadas (exploders que já explodiram, projéteis que já acertaram)
     // Não mudar para o for each por lidar com eliminação de itens (Vai dar problema)
@@ -491,6 +534,68 @@ function updateTorre(torre, entities, dt, novasEntidades, stateAtual) {
     torre.attackCooldown = torre.attackInterval;
 }
 
+// Cria o chefão: some com tudo que estiver em campo (menos a torre, que é a
+// entidade[0]) e nasce sozinho — é uma "arena limpa" pro confronto final.
+function spawnEnemyBoss(entities, stateAtual) {
+    entities.length = 1; // remove todos os inimigos/projéteis, mantém só a torre (índice 0)
+    const spawnPosition = createSpawnPosition(0.3);
+
+    entities.push({
+        type: "enemyBoss",
+        x: spawnPosition.x,
+        y: spawnPosition.y,
+        hp: 200,
+        speed: 0.3,
+        scale: 0.3,  // maior que qualquer inimigo comum (o maior deles é 0.15) — é pra impor respeito
+        dano: 85,                  // dano do ataque corpo a corpo normal
+        primeiroAtaque: 150,       // dano bônus do primeiro golpe, logo após o dash
+        rangePrimeiroAtaque: 0.7,  // distância em que ele inicia o dash
+        speedPrimeiroAtaque: 1.5,  // velocidade durante o dash (bem mais rápido)
+        emDash: false,
+        attackInterval: 1.0,
+        attackCooldown: 0,
+        color: [1.0, 0.2, 0.2, 1.0], // usado só se a textura falhar ao carregar
+        texturaFrames: stateAtual.texturas?.boss,
+        animFrame: 0,
+        animTimer: 0,
+        animInterval: 0.18,
+        modelMatrix: mat4.create(),
+    });
+}
+
+// IA do chefão: anda até certa distância, dá um "dash" (arranco) rápido pra
+// cima da torre, e o primeiro golpe depois do dash causa dano bônus.
+function updateBoss(entity, torre, dt) {
+    const dx = torre.x - entity.x;
+    const dy = torre.y - entity.y;
+    const dist = Math.hypot(dx, dy);
+    const dashRange = torre.scale + entity.rangePrimeiroAtaque;
+    const contactRange = torre.scale + entity.scale;
+
+    if (!entity.emDash && dist > dashRange) {
+        // Ainda longe: anda normal
+        entity.x += (dx / dist) * entity.speed * dt;
+        entity.y += (dy / dist) * entity.speed * dt;
+        avancarAnimacao(entity, dt);
+    } else if (dist > contactRange) {
+        // Entrou no alcance do dash: mantém o arranco até encostar na torre
+        entity.emDash = true;
+        entity.x += (dx / dist) * entity.speedPrimeiroAtaque * dt;
+        entity.y += (dy / dist) * entity.speedPrimeiroAtaque * dt;
+        avancarAnimacao(entity, dt);
+    } else {
+        // Alcançou a torre: ataca corpo a corpo
+        entity.attackCooldown -= dt;
+        if (entity.attackCooldown <= 0) {
+            // O golpe logo após o dash é o "primeiro ataque" (bônus de dano);
+            // os seguintes, parado, usam o dano normal.
+            torre.hp -= entity.emDash ? entity.primeiroAtaque : entity.dano;
+            entity.attackCooldown = entity.attackInterval;
+            entity.emDash = false;
+        }
+    }
+}
+
 // Manipulação da matriz de projeção para setar um ponto de spawn para cada novo inimigo
 function createSpawnPosition(scale) {
     const worldHalfSize = 1.5; // Tamanho da projeção para spawnar do lado de fora da arena
@@ -516,12 +621,13 @@ function createSpawnPosition(scale) {
             
 // Factory para cada tipo de inimigo
 function spawnEnemyMelee(entities, stateAtual) {
-    const spawnPosition = createSpawnPosition(0.15);
+    const spawnPosition = caminhoInimigos[0];
 
     entities.push({
         type: "enemyMelee",
         x: spawnPosition.x,
         y: spawnPosition.y,
+        caminhoIndex: 0,
         hp: 20,
         pontos: 10,        // recompensa por abate
         speed: 0.6,
@@ -539,12 +645,13 @@ function spawnEnemyMelee(entities, stateAtual) {
 }
 
 function spawnEnemyRanged(entities, stateAtual) {
-    const spawnPosition = createSpawnPosition(0.15);
+    const spawnPosition = caminhoInimigos[0];
 
     entities.push({
         type: "enemyRanged",
         x: spawnPosition.x,
         y: spawnPosition.y,
+        caminhoIndex: 0,
         hp: 15,
         pontos: 15,        // frágil, mas incomoda de longe
         speed: 0.25,
@@ -565,12 +672,13 @@ function spawnEnemyRanged(entities, stateAtual) {
 
 // Explode quando entra em contato com a torre
 function spawnEnemyExploder(entities, stateAtual) {
-    const spawnPosition = createSpawnPosition(0.15);
+    const spawnPosition = caminhoInimigos[0];
 
     entities.push({
         type: "enemyExploder",
         x: spawnPosition.x,
         y: spawnPosition.y,
+        caminhoIndex: 0,
         hp: 60,
         pontos: 25,        // mais vida e dano alto, vale mais
         speed: 0.4,
@@ -602,8 +710,7 @@ function updateMelee(entity, torre, dt) {
     const attackRange = torre.scale + entity.scale;
 
     if (dist > attackRange) {
-        entity.x += (dx / dist) * entity.speed * dt;
-        entity.y += (dy / dist) * entity.speed * dt;
+        seguirCaminho(entity, dt);
         avancarAnimacao(entity, dt);
     } else {
         entity.attackCooldown -= dt;
@@ -620,8 +727,7 @@ function updateRanged(entity, torre, dt, novasEntidades, stateAtual) {
     const dist = Math.hypot(dx, dy);
 
     if (dist > entity.attackRange) {
-        entity.x += (dx / dist) * entity.speed * dt;
-        entity.y += (dy / dist) * entity.speed * dt;
+        seguirCaminho(entity, dt);
         avancarAnimacao(entity, dt);
     } else {
         entity.attackCooldown -= dt;
@@ -698,13 +804,35 @@ function updateExploder(entity, torre, dt) {
     const explodeRange = torre.scale + entity.scale;
 
     if (dist > explodeRange) {
-        entity.x += (dx / dist) * entity.speed * dt;
-        entity.y += (dy / dist) * entity.speed * dt;
+        seguirCaminho(entity, dt);
         avancarAnimacao(entity, dt);
     } else {
         torre.hp -= entity.dano;   // dano único
         entity.marcadoParaRemover = true;
     }
+}
+
+// Move a entidade rumo ao próximo ponto do caminho fixo; ao chegar perto o
+// bastante, "encaixa" nele e avança pro próximo. Último ponto = fica parado lá
+// (na prática nunca chega a esse ponto, porque o alcance de ataque intercepta antes).
+function seguirCaminho(entity, dt) {
+    if (entity.caminhoIndex >= caminhoInimigos.length - 1) return;
+
+    const proximoPonto = caminhoInimigos[entity.caminhoIndex + 1];
+    const dx = proximoPonto.x - entity.x;
+    const dy = proximoPonto.y - entity.y;
+    const distancia = Math.hypot(dx, dy);
+    const passo = entity.speed * dt;
+
+    if (distancia <= passo) {
+        entity.x = proximoPonto.x;
+        entity.y = proximoPonto.y;
+        entity.caminhoIndex += 1;
+        return;
+    }
+
+    entity.x += (dx / distancia) * passo;
+    entity.y += (dy / distancia) * passo;
 }
 
 // Escolhe um tipo de inimigo aleatório

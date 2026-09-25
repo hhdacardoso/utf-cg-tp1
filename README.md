@@ -46,3 +46,5 @@ Melhore sua torre conforme elimina os inimigos, eles vão ficar mais fortes com 
 - **Telas e Menus:** Telas de início, opções/pause, créditos e reinício.
 
 # Créditos
+**Sprites/Gráficos:** Gerados proceduralmente através de um script em Python com a biblioteca Pillow com formas geométricas e supersampling 4x. Sem assets de terceiros.
+**Áudio/Efeitos Sonoros:** Gerados em tempo real via Web Audio API com osciladores, gain effect, biquad filter e ruído sintetizado.

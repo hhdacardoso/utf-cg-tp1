@@ -1,4 +1,4 @@
-# Space-Wars by Hugo Henrique de Andrade Cardoso
+# Space-Wars
 
 Esse repositório se trata do jogo no estilo Tower Defense para a disciplina de Computação Gráfica relativo ao Trabalho Prático 1 feito em WebGL e JavaScript.
 

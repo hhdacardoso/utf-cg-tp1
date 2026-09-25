@@ -8,22 +8,41 @@ Caso sua torre esteja com dificuldade, você consegue ajudar a atacar os inimigo
 
 Melhore sua torre conforme elimina os inimigos, eles vão ficar mais fortes com o tempo.
 
-Se a sua torre ficar sem vida, você perde.
+> ⚠️ Se a vida da sua torre chegar a zero, é **Fim de Jogo**.
 
 # Criadores
 
-- Custódio Junio Queiroz Silva (github.com/Cjunio23)
-- Hugo Henrique de Andrade Cardoso (github.com/hhdacardoso)
+* **Custódio Júnio Queiroz Silva** — [@Cjunio23](https://github.com/Cjunio23)
+* **Hugo Henrique de Andrade Cardoso** — [@hhdacardoso](https://github.com/hhdacardoso)
 
 # Media Kit
-![[Pasted image 20260925114748.png]]
-![[Pasted image 20260925114837.png|663]]
-![[Pasted image 20260925114959.png|664]]
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <b>Tela Inicial</b><br><br>
+      <img src="README_imgs/Tela%20inicial.png" alt="Tela Inicial" width="100%">
+    </td>
+    <td align="center" width="33%">
+      <b>Gameplay</b><br><br>
+      <img src="README_imgs/Gameplay.png" alt="Gameplay" width="100%">
+    </td>
+    <td align="center" width="33%">
+      <b>Boss</b><br><br>
+      <img src="README_imgs/Boss.png" alt="Boss" width="100%">
+    </td>
+  </tr>
+</table>
+
 # Opcionais
 
-- Inimigos diferentes: Temos o inimigo que ataca somente corpo a corpo (Melee), inimigo que ataca à distância (Ranged) e o Kamikaze (Exploder).
-- Caminho dos inimigos: Os inimigos devem passar por uma sequência de checkpoints até conseguir te atacar - Talvez os Rangeds consigam um pouco antes.
-- Música temática e efeitos sonoros
-- Cursor diferente para ampliar a imersão
-- Texturas animadas
-- Telas de início, opções (pause), créditos e reinício
+- **Inimigos Diversificados:**
+  - **Melee:** Inimigos de ataque corpo a corpo.
+  - **Ranged:** Inimigos que atacam à distância.
+  - **Exploder (Kamikaze):** Inimigos que se autodestroem ao atingir o alvo.
+- **Caminho dos Inimigos:** Os oponentes percorrem uma sequência fixa de *checkpoints* até alcançar a torre (com exceção dos *Rangeds*, que podem atacar de mais longe).
+- **Trilha Sonora e SFX:** Músicas temáticas e efeitos sonoros imersivos.
+- **Interface Customizada:** Cursor personalizado para maior imersão.
+- **Gráficos e Animações:** Uso de texturas animadas.
+- **Telas e Menus:** Telas de início, opções/pause, créditos e reinício.
+
+# Créditos

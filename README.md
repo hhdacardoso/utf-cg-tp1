@@ -4,9 +4,7 @@ Esse repositório se trata do jogo no estilo Tower Defense para a disciplina de 
 
 Defenda sua torre dos inimigos que irão aparecer. Eles podem atacar de diversas formas, cuidado com as explosões.
 
-Caso sua torre esteja com dificuldade, você consegue ajudar a atacar os inimigos com a sua Espada de Energia.
-
-Melhore sua torre conforme elimina os inimigos, eles vão ficar mais fortes com o tempo.
+Caso sua torre esteja com dificuldade, você consegue ajudar a atacar os inimigos com a sua Espada de Energia (Clique para atacar).
 
 > ⚠️ Se a vida da sua torre chegar a zero, é **Fim de Jogo**.
 

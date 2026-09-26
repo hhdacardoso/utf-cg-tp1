@@ -12,6 +12,7 @@ const square = new Float32Array
     1.0, -1.0,
     1.0, 1.0,
 ]);
+const checkpointModelMatrix = mat4.create();
 
 export function setupWebGL(){
     const canvas = document.querySelector("#glcanvas");
@@ -60,8 +61,15 @@ export function initialize(gl){
     gl.enableVertexAttribArray(vertexPositionLocation);
     gl.vertexAttribPointer(vertexPositionLocation, 2, gl.FLOAT, false, 0, 0);
 
+    const pathVao = createVao(gl);
+    const pathVbo = createVbo(gl, new Float32Array(0), gl.DYNAMIC_DRAW);
+    gl.enableVertexAttribArray(vertexPositionLocation);
+    gl.vertexAttribPointer(vertexPositionLocation, 2, gl.FLOAT, false, 0, 0);
+
     return {program,
         squareVao: vao,
+        pathVao,
+        pathVbo,
         colorLocation: gl.getUniformLocation(program, "u_color"),
         modelLocation: gl.getUniformLocation(program, "u_model"),
         projectionLocation: gl.getUniformLocation(program, "u_projection"),
@@ -146,11 +154,32 @@ function createOrthogonalMatrix(left, right, bottom, top, near, far) {
 }
 
 // Conferir se a função está funcionando corretamente com export
-export function render(gl, state, entities){
+export function render(gl, state, entities, checkpoints = null){
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     gl.bindVertexArray(state.squareVao);
     gl.uniformMatrix4fv(state.projectionLocation, false, projectionMatrix);
+
+    if (checkpoints?.length > 1) {
+        const pathVertices = new Float32Array(checkpoints.flatMap(({ x, y }) => [x, y]));
+        gl.bindVertexArray(state.pathVao);
+        gl.bindBuffer(gl.ARRAY_BUFFER, state.pathVbo);
+        gl.bufferData(gl.ARRAY_BUFFER, pathVertices, gl.DYNAMIC_DRAW);
+        gl.uniformMatrix4fv(state.modelLocation, false, mat4.create());
+        gl.uniform1i(state.useTextureLocation, 0);
+        gl.uniform4fv(state.colorLocation, [0.2, 0.95, 0.9, 0.75]);
+        gl.drawArrays(gl.LINE_STRIP, 0, checkpoints.length);
+
+        gl.bindVertexArray(state.squareVao);
+        gl.uniform4fv(state.colorLocation, [1.0, 0.75, 0.3, 1.0]);
+        for (const { x, y } of checkpoints) {
+            mat4.identity(checkpointModelMatrix);
+            mat4.translate(checkpointModelMatrix, checkpointModelMatrix, [x, y, 0]);
+            mat4.scale(checkpointModelMatrix, checkpointModelMatrix, [0.035, 0.035, 1]);
+            gl.uniformMatrix4fv(state.modelLocation, false, checkpointModelMatrix);
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+        }
+    }
 
     for (const entity of entities){
         gl.uniformMatrix4fv(state.modelLocation, false, entity.modelMatrix);
